@@ -75,6 +75,9 @@ def get_appointments(start, end, cursor = None):
     if new_cursor and (new_cursor != cursor):
         new_appts = get_appointments(start, end, new_cursor)
         appointments = pd.concat([appointments, new_appts])
+    appointments["length"] = appointments.duration.apply(lambda x: "Half-Hour" if x == 30 else "Hour")
+    appointments = appointments.drop(columns = ["duration"])
+    #appointments.columns = ['Peer', 'Type', 'Start', 'Time', 'Month', 'Weekday', 'Length']
     return appointments
 
 def write_staff_dict():
