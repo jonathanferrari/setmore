@@ -1,1 +1,0 @@
-setmore_get("bookingpage/services")

@@ -1,4 +1,4 @@
-import requests, os, dotenv, json, time
+import requests, os, dotenv, json, time, pandas as pd
 
 dotenv.load_dotenv()
 
@@ -6,6 +6,18 @@ dotenv.load_dotenv()
 email = "bffs@berkeley.edu"
 base = "https://developer.setmore.com/api/v1"
 
+
+def appt_json_to_df(appts):
+    df = pd.DataFrame(appts)
+    df["start"] = pd.to_datetime(df.start_time)
+    df = df.set_index("key", drop = True)
+    df = df.drop(columns = ["start_time", "end_time", "staff_key", "service_key"])
+    df["staff"] = df.staff.str.split("(").str[0]
+    df["service"] = df.service.str.split("]").str[0].str[1:]
+    df["time"] = df.start.apply(lambda x: x.time().strftime("%I:%M %p"))
+    df["month"] = df.start.apply(lambda x: x.date().strftime("%B"))
+    df["weekday"] = df.start.apply(lambda x: x.date().strftime("%A"))
+    return df
 
 def get_refresh_token():
     refresh_token = os.getenv("REFRESH_TOKEN")
@@ -36,8 +48,34 @@ def get_services():
 def get_staff():
     return setmore_get("bookingapi/staffs")
 
-def get_appointments(start, end):
-    return setmore_get(f"bookingapi/appointments?startDate={start}&endDate={end}&customerDetails=true")
+def get_appointments(start, end, cursor = None):
+    staff = read("staff")
+    services = read("services")
+    cursor = f"&cursor={cursor}" if cursor else ""
+    new_cursor = None
+    appts = setmore_get(f"bookingapi/appointments?startDate={start}{cursor}&endDate={end}&customerDetails=true")
+    try:
+        if "cursor" in appts:
+            new_cursor = appts["cursor"]
+        appts = appts["appointments"]
+        appointments = []
+        for a in appts:
+            apt = {k: a[k] for k in ('key', "staff_key" , 'service_key', 'start_time', 'end_time', "duration")}
+            apt["staff"] = staff.get(a["staff_key"], a["staff_key"])
+            apt['service'] = services.get(a["service_key"], a["service_key"])
+            appointments += [apt]
+    except Exception as e:
+        try:
+            globals()['bearer'] = get_refresh_token()
+            return get_appointments(start, end, cursor if (cursor != "") else None)
+        except Exception as e:
+            print(e)
+            return appts
+    appointments = appt_json_to_df(appointments)
+    if new_cursor and (new_cursor != cursor):
+        new_appts = get_appointments(start, end, new_cursor)
+        appointments = pd.concat([appointments, new_appts])
+    return appointments
 
 def write_staff_dict():
     staff = get_staff()["staffs"]
