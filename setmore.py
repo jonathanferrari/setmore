@@ -198,6 +198,7 @@ def plot(df):
                 elif graph == "Histogram":
                     fig = px.histogram(df, x = "start", marginal="rug",
                                        template = "seaborn", title = "Histogram of Appointments")
+                fig.update_layout(width = 1300, height = 600)
                 fig.show()
         elif x == "date":
             @interact(graph = Dropdown(options = date_vals, value = "Strip"))
@@ -215,6 +216,7 @@ def plot(df):
                 elif graph == "Histogram":
                     fig = px.histogram(df, x = "start", color = "staff", marginal="rug", barmode = "overlay", 
                                        template = "seaborn", title = "Histogram of Appointments by Peer")
+                fig.update_layout(width = 1300, height = 600)
                 fig.show()
         else:
             @interact(graph = Dropdown(options = ["Bar", "Pie"], value = "Bar"))
@@ -226,5 +228,17 @@ def plot(df):
                     fig = fig.update_xaxes(categoryorder = "total descending")
                 else:
                     fig = px.pie(df, x, template = "seaborn", title = title)
-                #fig.update_layout(width = 1600, height = 800)
+                fig.update_layout(width = 1300, height = 600)
                 fig.show()
+
+
+start, end = DatePicker(), DatePicker()
+
+def widget_to_date(widget):
+    return widget.value.strftime("%d-%m-%Y")
+
+def get_dates(start, end):
+    return widget_to_date(start), widget_to_date(end)
+
+def printmd(s):
+  display(Markdown(s))
