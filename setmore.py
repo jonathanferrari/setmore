@@ -1,4 +1,9 @@
-import requests, os, dotenv, json, time, pandas as pd
+import requests, os, dotenv, json, time
+import numpy as np, pandas as pd
+from IPython import *
+from IPython.display import *
+from ipywidgets import *
+import plotly.express as px, plotly.figure_factory as ff
 
 dotenv.load_dotenv()
 
@@ -166,3 +171,60 @@ def delay(n: int = 60, step: int = 5) -> None:
         print(f"Sleeping for {n - d} seconds", end="\r")
         time.sleep(step)
         d += step
+        
+# fix column name errors
+def plot(df):
+    
+    @interact(x = Dropdown(
+        options = ["all", "date", 'staff', 'service', 'time', 'month', 'weekday', 'length'], 
+        value = "all"
+        )
+    )
+    def pick_plotter(x):
+        date_vals = ["Line", "Strip", "Violin", "Histogram"]
+        if x == "all":
+            @interact(graph = Dropdown(options = date_vals, value = "Line"))
+            def all_plot(graph):
+                if graph == "Line":
+                    fig = px.line(df, x = "start", 
+                                  template = "seaborn", title = "Line Plot of Appointments")
+                    fig.update_yaxes(visible=False, showticklabels=False)
+                elif graph == "Violin":
+                    fig = px.violin(df, x = "start", 
+                                    template = "seaborn", title = "Violin Plot of Appointments")
+                elif graph == "Strip":
+                    fig = px.strip(df, x = "start", 
+                                   template = "seaborn", title = "Strip Plot of Appointments")
+                elif graph == "Histogram":
+                    fig = px.histogram(df, x = "start", marginal="rug",
+                                       template = "seaborn", title = "Histogram of Appointments")
+                fig.show()
+        elif x == "date":
+            @interact(graph = Dropdown(options = date_vals, value = "Strip"))
+            def date_plot_by_staff(graph):
+                if graph == "Line":
+                    fig = px.line(df, x = "start", color = "staff", 
+                                  template = "seaborn", title = "Line Plot of Appointments by Peer")
+                    fig.update_yaxes(visible=False, showticklabels=False)
+                elif graph == "Violin":
+                    fig = px.violin(df, y = "start", color = "staff", 
+                                    template = "seaborn", title = "Violin Plot of Appointments by Peer")
+                elif graph == "Strip":
+                    fig = px.strip(df, x = "start", color = "staff", y = "staff", 
+                                   template = "seaborn", title = "Strip Plot of Appointments by Peer")
+                elif graph == "Histogram":
+                    fig = px.histogram(df, x = "start", color = "staff", marginal="rug", barmode = "overlay", 
+                                       template = "seaborn", title = "Histogram of Appointments by Peer")
+                fig.show()
+        else:
+            @interact(graph = Dropdown(options = ["Bar", "Pie"], value = "Bar"))
+            def visualize(graph):
+                title = f"{graph} Chart of {x} of Appointments"
+                if graph == "Bar":
+                    fig = px.histogram(df, x, 
+                                    template = "seaborn", color = x, title = title)
+                    fig = fig.update_xaxes(categoryorder = "total descending")
+                else:
+                    fig = px.pie(df, x, template = "seaborn", title = title)
+                #fig.update_layout(width = 1600, height = 800)
+                fig.show()
